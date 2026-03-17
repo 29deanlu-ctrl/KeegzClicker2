@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Tycoon Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 100%);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #87CEEB;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            z-index: 10;
+        }
+
+        .stat {
+            background: rgba(0,0,0,0.5);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        #upgradeMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            color: white;
+            display: none;
+            max-width: 500px;
+            z-index: 100;
+            border: 3px solid #FFD700;
+        }
+
+        #upgradeMenu h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .upgrade-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 2px solid #555;
+        }
+
+        .upgrade-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #FFD700;
+        }
+
+        .upgrade-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .upgrade-btn:hover {
+            background: #45a049;
+        }
+
+        .upgrade-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #closeUpgrade {
+            background: #f44336;
+            margin-top: 20px;
+        }
+
+        #closeUpgrade:hover {
+            background: #da190b;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .key {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+
+        #nearUpgradeText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 215, 0, 0.9);
+            color: black;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 20px;
+            display: none;
+            z-index: 50;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div class="stat">
+            <span class="stat-label">💰 Money:</span> $<span id="money">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">💵 Income/sec:</span> $<span id="income">1</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">🚀 Speed:</span> <span id="speed">1.0</span>x
+        </div>
+    </div>
+
+    <div id="nearUpgradeText">Press E to Upgrade!</div>
+
+    <div id="upgradeMenu">
+        <h2>🏪 UPGRADE SHOP 🏪</h2>
+        
+        <div class="upgrade-item">
+            <h3>💰 Money Multiplier</h3>
+            <p>Doubles your income per second</p>
+            <p>Cost: $<span id="incomeUpgradeCost">50</span></p>
+            <p>Current Level: <span id="incomeLevel">0</span></p>
+            <button class="upgrade-btn" id="buyIncomeUpgrade">Buy Upgrade</button>
+        </div>
+
+        <div class="upgrade-item">
+            <h3>🚀 Speed Boost</h3>
+            <p>Increases movement speed by 50%</p>
+            <p>Cost: $<span id="speedUpgradeCost">100</span></p>
+            <p>Current Level: <span id="speedLevel">0</span></p>
+            <button class="upgrade-btn" id="buySpeedUpgrade">Buy Upgrade</button>
+        </div>
+
+        <div class="upgrade-item">
+            <h3>🎯 Auto Collector</h3>
+            <p>Automatically collect money from farther away</p>
+            <p>Cost: $<span id="rangeUpgradeCost">200</span></p>
+            <p>Current Level: <span id="rangeLevel">0</span></p>
+            <button class="upgrade-btn" id="buyRangeUpgrade">Buy Upgrade</button>
+        </div>
+
+        <button class="upgrade-btn" id="closeUpgrade">Close Shop</button>
+    </div>
+
+    <div id="instructions">
+        Controls: <span class="key">WASD</span> to move | <span class="key">E</span> to open upgrade shop near building
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Load player image
+        const playerImage = new Image();
+        playerImage.src = 'player.jpeg';  // Make sure player.jpeg is in the same folder as this HTML file
+        let imageLoaded = false;
+        playerImage.onload = () => {
+            imageLoaded = true;
+            console.log('Player image loaded successfully!');
+        };
+        playerImage.onerror = () => {
+            console.error('Failed to load player image');
+        };
+
+        // Game state
+        const game = {
+            player: {
+                x: 400,
+                y: 400,
+                z: 0,
+                size: 40,
+                speed: 3,
+                color: '#FF6B6B'
+            },
+            money: 0,
+            income: 1,
+            speedMultiplier: 1,
+            collectionRange: 50,
+            
+            upgrades: {
+                income: { level: 0, cost: 50, multiplier: 2 },
+                speed: { level: 0, cost: 100, multiplier: 1.5 },
+                range: { level: 0, cost: 200, multiplier: 1.5 }
+            },
+
+            upgradeBuilding: {
+                x: 700,
+                y: 300,
+                width: 100,
+                height: 120,
+                color: '#FFD700'
+            },
+
+            moneySpawns: [],
+            keys: {},
+            nearUpgrade: false,
+            upgradeMenuOpen: false
+        };
+
+        // Money spawn points
+        function spawnMoney() {
+            const spawn = {
+                x: Math.random() * (canvas.width - 100) + 50,
+                y: Math.random() * (canvas.height - 100) + 50,
+                size: 20,
+                value: game.income,
+                collected: false,
+                angle: 0
+            };
+            game.moneySpawns.push(spawn);
+        }
+
+        // Initial money spawns
+        for (let i = 0; i < 15; i++) {
+            spawnMoney();
+        }
+
+        // Keyboard input
+        window.addEventListener('keydown', (e) => {
+            game.keys[e.key.toLowerCase()] = true;
+            
+            if (e.key.toLowerCase() === 'e' && game.nearUpgrade && !game.upgradeMenuOpen) {
+                openUpgradeMenu();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            game.keys[e.key.toLowerCase()] = false;
+        });
+
+        // Update player position
+        function updatePlayer() {
+            const speed = game.player.speed * game.speedMultiplier;
+            
+            if (game.keys['w']) game.player.y -= speed;
+            if (game.keys['s']) game.player.y += speed;
+            if (game.keys['a']) game.player.x -= speed;
+            if (game.keys['d']) game.player.x += speed;
+
+            // Keep player in bounds
+            game.player.x = Math.max(game.player.size, Math.min(canvas.width - game.player.size, game.player.x));
+            game.player.y = Math.max(game.player.size, Math.min(canvas.height - game.player.size, game.player.y));
+        }
+
+        // Check for money collection
+        function collectMoney() {
+            game.moneySpawns.forEach((spawn, index) => {
+                if (spawn.collected) return;
+                
+                const dx = game.player.x - spawn.x;
+                const dy = game.player.y - spawn.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < game.player.size + spawn.size + game.collectionRange) {
+                    game.money += spawn.value;
+                    spawn.collected = true;
+                    
+                    // Respawn money after delay
+                    setTimeout(() => {
+                        game.moneySpawns[index] = {
+                            x: Math.random() * (canvas.width - 100) + 50,
+                            y: Math.random() * (canvas.height - 100) + 50,
+                            size: 20,
+                            value: game.income,
+                            collected: false,
+                            angle: 0
+                        };
+                    }, 2000);
+                }
+            });
+        }
+
+        // Check if near upgrade building
+        function checkNearUpgrade() {
+            const dx = game.player.x - (game.upgradeBuilding.x + game.upgradeBuilding.width / 2);
+            const dy = game.player.y - (game.upgradeBuilding.y + game.upgradeBuilding.height / 2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            game.nearUpgrade = distance < 150;
+            document.getElementById('nearUpgradeText').style.display = game.nearUpgrade && !game.upgradeMenuOpen ? 'block' : 'none';
+        }
+
+        // Draw 3D-ish ground
+        function drawGround() {
+            // Grass
+            ctx.fillStyle = '#7EC850';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid pattern for depth
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let i = 0; i < canvas.height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+        }
+
+        // Draw upgrade building (3D effect)
+        function drawUpgradeBuilding() {
+            const b = game.upgradeBuilding;
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(b.x + 10, b.y + b.height + 10, b.width, 20);
+
+            // Building front
+            ctx.fillStyle = b.color;
+            ctx.fillRect(b.x, b.y, b.width, b.height);
+
+            // Building side (3D effect)
+            ctx.fillStyle = '#D4AF37';
+            ctx.beginPath();
+            ctx.moveTo(b.x + b.width, b.y);
+            ctx.lineTo(b.x + b.width + 20, b.y - 20);
+            ctx.lineTo(b.x + b.width + 20, b.y + b.height - 20);
+            ctx.lineTo(b.x + b.width, b.y + b.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Building top
+            ctx.fillStyle = '#F4E5C3';
+            ctx.beginPath();
+            ctx.moveTo(b.x, b.y);
+            ctx.lineTo(b.x + 20, b.y - 20);
+            ctx.lineTo(b.x + b.width + 20, b.y - 20);
+            ctx.lineTo(b.x + b.width, b.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Door
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(b.x + 35, b.y + 60, 30, 60);
+
+            // Windows
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(b.x + 15, b.y + 30, 20, 20);
+            ctx.fillRect(b.x + 65, b.y + 30, 20, 20);
+
+            // Sign
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('SHOP', b.x + b.width / 2, b.y - 30);
+        }
+
+        // Draw player (using uploaded image)
+        function drawPlayer() {
+            const p = game.player;
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(p.x, p.y + p.size + 5, p.size * 0.6, p.size * 0.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (imageLoaded) {
+                // Draw the player's image
+                ctx.save();
+                
+                // Create circular clipping path for the image
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.clip();
+                
+                // Draw image centered and scaled to fit
+                const imgSize = p.size * 2;
+                ctx.drawImage(playerImage, p.x - p.size, p.y - p.size, imgSize, imgSize);
+                
+                ctx.restore();
+                
+                // Border around image
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                // Fallback if image hasn't loaded yet
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Loading...', p.x, p.y);
+            }
+        }
+
+        // Draw money
+        function drawMoney() {
+            game.moneySpawns.forEach(spawn => {
+                if (spawn.collected) return;
+
+                spawn.angle += 0.05;
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(spawn.x, spawn.y + spawn.size + 3, spawn.size * 0.8, spawn.size * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Coin (rotating effect)
+                const scale = Math.abs(Math.cos(spawn.angle));
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.ellipse(spawn.x, spawn.y, spawn.size * scale, spawn.size, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Coin border
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(spawn.x, spawn.y, spawn.size * scale, spawn.size, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Dollar sign
+                ctx.fillStyle = '#8B7500';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('$', spawn.x, spawn.y);
+            });
+        }
+
+        // Draw everything
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawGround();
+            drawUpgradeBuilding();
+            drawMoney();
+            drawPlayer();
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('money').textContent = Math.floor(game.money);
+            document.getElementById('income').textContent = game.income;
+            document.getElementById('speed').textContent = game.speedMultiplier.toFixed(1);
+        }
+
+        // Passive income
+        setInterval(() => {
+            game.money += game.income / 10;
+        }, 100);
+
+        // Open upgrade menu
+        function openUpgradeMenu() {
+            game.upgradeMenuOpen = true;
+            document.getElementById('upgradeMenu').style.display = 'block';
+            updateUpgradeMenu();
+        }
+
+        // Close upgrade menu
+        document.getElementById('closeUpgrade').addEventListener('click', () => {
+            game.upgradeMenuOpen = false;
+            document.getElementById('upgradeMenu').style.display = 'none';
+        });
+
+        // Update upgrade menu
+        function updateUpgradeMenu() {
+            // Income upgrade
+            document.getElementById('incomeUpgradeCost').textContent = game.upgrades.income.cost;
+            document.getElementById('incomeLevel').textContent = game.upgrades.income.level;
+            document.getElementById('buyIncomeUpgrade').disabled = game.money < game.upgrades.income.cost;
+
+            // Speed upgrade
+            document.getElementById('speedUpgradeCost').textContent = game.upgrades.speed.cost;
+            document.getElementById('speedLevel').textContent = game.upgrades.speed.level;
+            document.getElementById('buySpeedUpgrade').disabled = game.money < game.upgrades.speed.cost;
+
+            // Range upgrade
+            document.getElementById('rangeUpgradeCost').textContent = game.upgrades.range.cost;
+            document.getElementById('rangeLevel').textContent = game.upgrades.range.level;
+            document.getElementById('buyRangeUpgrade').disabled = game.money < game.upgrades.range.cost;
+        }
+
+        // Buy income upgrade
+        document.getElementById('buyIncomeUpgrade').addEventListener('click', () => {
+            if (game.money >= game.upgrades.income.cost) {
+                game.money -= game.upgrades.income.cost;
+                game.upgrades.income.level++;
+                game.income *= game.upgrades.income.multiplier;
+                game.upgrades.income.cost = Math.floor(game.upgrades.income.cost * 2.5);
+                updateUpgradeMenu();
+            }
+        });
+
+        // Buy speed upgrade
+        document.getElementById('buySpeedUpgrade').addEventListener('click', () => {
+            if (game.money >= game.upgrades.speed.cost) {
+                game.money -= game.upgrades.speed.cost;
+                game.upgrades.speed.level++;
+                game.speedMultiplier *= game.upgrades.speed.multiplier;
+                game.upgrades.speed.cost = Math.floor(game.upgrades.speed.cost * 2.5);
+                updateUpgradeMenu();
+            }
+        });
+
+        // Buy range upgrade
+        document.getElementById('buyRangeUpgrade').addEventListener('click', () => {
+            if (game.money >= game.upgrades.range.cost) {
+                game.money -= game.upgrades.range.cost;
+                game.upgrades.range.level++;
+                game.collectionRange *= game.upgrades.range.multiplier;
+                game.upgrades.range.cost = Math.floor(game.upgrades.range.cost * 2.5);
+                updateUpgradeMenu();
+            }
+        });
+
+        // Game loop
+        function gameLoop() {
+            if (!game.upgradeMenuOpen) {
+                updatePlayer();
+                collectMoney();
+                checkNearUpgrade();
+            }
+            draw();
+            updateUI();
+            if (game.upgradeMenuOpen) {
+                updateUpgradeMenu();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>
